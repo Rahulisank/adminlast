@@ -1,0 +1,93 @@
+<%- include('partials/header') %>
+<div class="content-wrapper">
+    <div class="container-fluid flex-grow-1 container-p-y"> 
+        <div class="row">
+            <div class="col-md-12 col-lg-12 mb-12">
+                <div class="card mb-4">
+                    <h5 class="card-header"><%= editing ? 'Edit Group' : 'Add Group' %></h5>
+                    <form class="card-body" action="<%= editing ? '/groups/edit/' + groupId : '/groups/add' %>" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="_method" value="<%= editing ? 'PUT' : 'POST' %>">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="groupname">Group Name</label>
+                                <input type="text" id="groupname" name="groupname" class="form-control" value="<%= groupname || '' %>" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="groupimage">Group Image</label>
+                                <input type="file" id="groupimage" name="groupimage" class="form-control" />
+                                <% if (editing && groupImage) { %>
+                                    <img src="/uploads/<%= groupImage %>" alt="Group Image" width="50" height="50" />
+                                <% } %> 
+                            </div>
+                        </div>
+                        <div class="pt-4">
+                            <button type="submit" class="btn btn-primary me-sm-3 me-1"><%= editing ? 'Update' : 'Submit' %></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group List -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-datatable table-responsive">
+                        <table id="example" class="table table-striped" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Sr.no</th>
+                                    <th>Group Name</th>
+                                    <th>Group Image</th>
+                                    <th>Created Date</th>
+                                    <th>Updated Date</th>
+                                    <th>Edit</th>
+                                    <th>Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% groups.forEach(function(group, index) { %>
+                                    <tr>
+                                        <td><%= index + 1 %></td>
+                                        <td><%= group.groupname %></td>
+                                        <td>
+                                            <% if (group.groupimage) { %>
+                                                <img src="/uploads/<%= group.groupimage %>" alt="Group Image" width="50" height="50" />
+                                            <% } %>
+                                        </td>
+                                        <td><%= group.created_at.toDateString() %></td>
+                                        <td><%= group.updated_at.toDateString() %></td>
+                                        <td>
+                                            <button type="button" class="btn btn-warning" onclick="editGroup(<%= group.id %>, '<%= group.groupname %>', '<%= group.groupimage %>')">Edit</button>
+                                        </td>
+                                        <td>
+                                            <a href="/groups/delete/<%= group.id %>" class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div> 
+
+    </div>
+</div>
+<%- include('partials/footer') %>
+
+<script>
+    function editGroup(id, name, image) {
+        // Update form action URL
+        const form = document.querySelector('form');
+        form.action = `/groups/edit/${id}`;
+        
+        // Update form values
+        form.querySelector('input[name="groupname"]').value = name;
+        form.querySelector('input[name="existingImage"]').value = image;
+        form.querySelector('button[type="submit"]').textContent = 'Update';
+
+        // Optionally scroll to the form
+        window.scrollTo({ top: form.offsetTop, behavior: 'smooth' });
+    }
+</script>

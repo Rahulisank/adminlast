@@ -1,0 +1,95 @@
+<%- include('partials/header') %>
+<div class="content-wrapper">
+    <div class="container-fluid flex-grow-1 container-p-y"> 
+        <div class="row">
+            <div class="col-md-12 col-lg-12 mb-12">
+                <div class="card mb-4">
+                    <h5 class="card-header"><%= editing ? 'Edit Blockchain' : 'Add Blockchain' %></h5>
+                    <form class="card-body" action="<%= editing ? '/blockchain/edit/' + blockchainId : '/blockchain/add' %>" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="_method" value="<%= editing ? 'PUT' : 'POST' %>">
+                        <input type="hidden" name="existingImage" value="<%= blockchainImage || '' %>"> <!-- Hidden field to preserve existing image -->
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="blockchainName">Blockchain Name</label>
+                                <input type="text" id="blockchainName" name="blockchainName" class="form-control" value="<%= blockchainName || '' %>" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="blockchainImage">Blockchain Image</label>
+                                <input type="file" id="blockchainImage" name="blockchainImage" class="form-control" />
+                                <% if (editing && blockchainImage) { %>
+                                    <img src="/uploads/<%= blockchainImage %>" alt="Blockchain Image" width="50" height="50" />
+                                <% } %> 
+                            </div>
+                        </div>
+                        <div class="pt-4">
+                            <button type="submit" class="btn btn-primary me-sm-3 me-1"><%= editing ? 'Update' : 'Submit' %></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blockchain List -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-datatable table-responsive">
+                        <table id="example" class="table table-striped" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Sr.no</th>
+                                    <th>Blockchain Name</th>
+                                    <th>Blockchain Image</th>
+                                    <th>Created Date</th>
+                                    <th>Updated Date</th>
+                                    <th>Edit</th>
+                                    <th>Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% blockchains.forEach(function(blockchain, index) { %>
+                                    <tr>
+                                        <td><%= index + 1 %></td>
+                                        <td><%= blockchain.blockchain_name %></td>
+                                        <td>
+                                            <% if (blockchain.blockchain_image) { %>
+                                                <img src="/uploads/<%= blockchain.blockchain_image %>" alt="Blockchain Image" width="50" height="50" />
+                                            <% } %>
+                                        </td>
+                                        <td><%= blockchain.created_at.toDateString() %></td>
+                                        <td><%= blockchain.updated_at.toDateString() %></td>
+                                        <td>
+                                            <button type="button" class="btn btn-warning" onclick="editBlockchain(<%= blockchain.id %>, '<%= blockchain.blockchain_name %>', '<%= blockchain.blockchain_image %>')">Edit</button>
+                                        </td>
+                                        <td>
+                                            <a href="/blockchain/delete/<%= blockchain.id %>" class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<%- include('partials/footer') %>
+
+<script>
+    function editBlockchain(id, name, image) {
+        // Update form action URL
+        const form = document.querySelector('form');
+        form.action = `/blockchain/edit/${id}`;
+        
+        // Update form values
+        form.querySelector('input[name="blockchainName"]').value = name;
+        form.querySelector('input[name="existingImage"]').value = image;
+        form.querySelector('button[type="submit"]').textContent = 'Update';
+
+        // Optionally scroll to the form
+        window.scrollTo({ top: form.offsetTop, behavior: 'smooth' });
+    }
+</script>

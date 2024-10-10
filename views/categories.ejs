@@ -1,0 +1,95 @@
+<%- include('partials/header') %>
+<div class="content-wrapper">
+    <div class="container-fluid flex-grow-1 container-p-y"> 
+        <div class="row">
+            <div class="col-md-12 col-lg-12 mb-12">
+                <div class="card mb-4">
+                    <h5 class="card-header"><%= editing ? 'Edit Category' : 'Add Category' %></h5>
+                    <form class="card-body" action="<%= editing ? '/categories/edit/' + categoryId : '/categories/add' %>" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="_method" value="<%= editing ? 'PUT' : 'POST' %>">
+                        <input type="hidden" name="existingImage" value="<%= categoryImage || '' %>"> <!-- Hidden field to preserve existing image -->
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="categoryname">Category Name</label>
+                                <input type="text" id="categoryname" name="categoryname" class="form-control" value="<%= categoryName || '' %>" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="categoryimage">Category Image</label>
+                                <input type="file" id="categoryimage" name="categoryimage" class="form-control" />
+                                <% if (editing && categoryImage) { %>
+                                    <img src="/uploads/<%= categoryImage %>" alt="Category Image" width="50" height="50" />
+                                <% } %>
+                            </div>
+                        </div>
+                        <div class="pt-4">
+                            <button type="submit" class="btn btn-primary me-sm-3 me-1"><%= editing ? 'Update' : 'Submit' %></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category List -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-datatable table-responsive">
+                        <table id="example" class="table table-striped" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Sr.no</th>
+                                    <th>Category Name</th>
+                                    <th>Category Image</th>
+                                    <th>Created Date</th>
+                                    <th>Updated Date</th>
+                                    <th>Edit</th>
+                                    <th>Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% categories.forEach(function(category, index) { %>
+                                    <tr>
+                                        <td><%= index + 1 %></td>
+                                        <td><%= category.categoryname %></td>
+                                        <td>
+                                            <% if (category.categoryimage) { %>
+                                                <img src="/uploads/<%= category.categoryimage %>" alt="Category Image" width="50" height="50" />
+                                            <% } %>
+                                        </td>
+                                        <td><%= category.created_at.toDateString() %></td>
+                                        <td><%= category.updated_at.toDateString() %></td>
+                                        <td>
+                                            <button type="button" class="btn btn-warning" onclick="editCategory(<%= category.id %>, '<%= category.categoryname %>', '<%= category.categoryimage %>')">Edit</button>
+                                        </td>
+                                        <td>
+                                            <a href="/categories/delete/<%= category.id %>" class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<%- include('partials/footer') %> 
+
+<script>
+    function editCategory(id, name, image) {
+        // Update form action URL
+        const form = document.querySelector('form');
+        form.action = `/categories/edit/${id}`;
+        
+        // Update form values
+        form.querySelector('input[name="categoryname"]').value = name;
+        form.querySelector('input[name="existingImage"]').value = image;
+        form.querySelector('button[type="submit"]').textContent = 'Update';
+
+        // Optionally scroll to the form
+        window.scrollTo({ top: form.offsetTop, behavior: 'smooth' });
+    }
+</script>
