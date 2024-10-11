@@ -133,18 +133,54 @@ server.listen(port, () => {
 
   
 // Socket.io connection
-io.on('connection', (socket) => {
-    console.log('New client connected');
+io.on('connection', (socket) => { 
   
-    // Join room for one-to-one chat (room is user-specific)
-    socket.on('join', (userId) => {  
-      if (typeof userId === 'object') {
-        userId = userId.userId;  
+  
+    
+   
+
+    socket.on('join', async ({ user1Id, user2Id }) => {
+      try {
+          const generateRoomId = (user1Id, user2Id) => {
+              const sortedIds = [user1Id, user2Id].sort((a, b) => a - b); // Ensure numerical sort
+              return `room_${sortedIds[0]}_${sortedIds[1]}`;
+          };
+    
+          const roomId = generateRoomId(user1Id, user2Id);
+    
+          // Check if the room already exists
+          const rows = await db.execute(
+              'SELECT room_id FROM rooms WHERE room_id = ?',
+              [roomId]
+          );
+          console.table(roomId);
+          console.table(user1Id);
+          console.table(user1Id);
+          // If no room exists, create a new room
+          // if (rows.length === 0) {
+          //     await db.execute(
+          //         'INSERT INTO rooms (room_id, user1_id, user2_id) VALUES (?, ?, ?)',
+          //         [roomId, user1Id, user2Id]
+          //     );
+          //     console.log(`New room created: ${roomId}`);
+          // } else {
+          //     console.log(`Rejoining room: ${roomId}`);
+          // }
+    
+          // Join the room
+          socket.join(roomId);
+          console.log(`User ${user1Id} and User ${user2Id} joined room ${roomId}`);
+    
+      } catch (error) {
+          console.error('Error in join event:', error);
       }
-  
-      socket.join(userId);
-      console.log(`User ${userId} joined their chat room.`);
     });
+
+    
+
+  
+  
+
   
     // Handle sending messages
     socket.on('sendMessage', ({ senderId, receiverId, message }) => {
@@ -164,6 +200,7 @@ io.on('connection', (socket) => {
           [senderId, receiverId, message],
           (err, result) => {
             if (err) {
+              io.to(receiverId).emit('receiveMessage', { senderId, message });
               socket.emit('error', 'Error sending message');
             } else {
               // Emit the message to the receiver's room
