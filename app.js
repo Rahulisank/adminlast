@@ -129,112 +129,83 @@ server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
+// Helper function to generate room ID
+const generateRoomId = (user1Id, user2Id) => {
+  const sortedIds = [user1Id, user2Id].sort((a, b) => a - b);
+  return `room_${sortedIds[0]}_${sortedIds[1]}`;
+};
 
-
-  
 // Socket.io connection
-io.on('connection', (socket) => { 
-  
-  
-    
-   
+io.on('connection', (socket) => {
+  console.log('New client connected');
 
-    socket.on('join', async ({ user1Id, user2Id }) => {
-      try {
-          const generateRoomId = (user1Id, user2Id) => {
-              const sortedIds = [user1Id, user2Id].sort((a, b) => a - b); // Ensure numerical sort
-              return `room_${sortedIds[0]}_${sortedIds[1]}`;
-          };
-    
-          const roomId = generateRoomId(user1Id, user2Id);
-    
-          // Check if the room already exists
-          const rows = await db.execute(
-              'SELECT room_id FROM rooms WHERE room_id = ?',
-              [roomId]
-          );
-          console.table(roomId);
-          console.table(user1Id);
-          console.table(user1Id);
-          // If no room exists, create a new room
-          // if (rows.length === 0) {
-          //     await db.execute(
-          //         'INSERT INTO rooms (room_id, user1_id, user2_id) VALUES (?, ?, ?)',
-          //         [roomId, user1Id, user2Id]
-          //     );
-          //     console.log(`New room created: ${roomId}`);
-          // } else {
-          //     console.log(`Rejoining room: ${roomId}`);
-          // }
-    
-          // Join the room
-          socket.join(roomId);
-          console.log(`User ${user1Id} and User ${user2Id} joined room ${roomId}`);
-    
-      } catch (error) {
-          console.error('Error in join event:', error);
-      }
-    });
+  // Handle joining a chat room (one-to-one) 
+socket.on('join', async ({ user1Id, user2Id }) => {
+  try {
+    const roomId = generateRoomId(user1Id, user2Id);
 
-    
+    // Check if room exists or create it
+    const [rows] = await db.query('SELECT * FROM rooms WHERE room_id = ?', [roomId]);
+    if (rows.length === 0) {
+      await db.query('INSERT INTO rooms (room_id, user1_id, user2_id) VALUES (?, ?, ?)', [roomId, user1Id, user2Id]);
+      console.log(`New room created: ${roomId}`);
+    } else {
+      console.log(`Rejoining room: ${roomId}`);
+    }
 
-  
-  
+    // Join the room
+    socket.join(roomId);
+    console.log(`User ${user1Id} and User ${user2Id} joined room ${roomId}`);
 
-  
-    // Handle sending messages
-    socket.on('sendMessage', ({ senderId, receiverId, message }) => {
-     
-        if (typeof senderId === 'object') {
-          senderId = senderId.userId; // Adjust this line based on your structure
-        }
-      
-        // Check if receiverId is an object and extract the userId
-        if (typeof receiverId === 'object') {
-          receiverId = receiverId.userId; // Adjust this line based on your structure
-        }
-        console.log(receiverId);
-        // Insert message into the database
-        db.query(
-          'INSERT INTO messages (sender_id, receiver_id, message) VALUES (?, ?, ?)',
-          [senderId, receiverId, message],
-          (err, result) => {
-            if (err) {
-              io.to(receiverId).emit('receiveMessage', { senderId, message });
-              socket.emit('error', 'Error sending message');
-            } else {
-              // Emit the message to the receiver's room
-              io.to(receiverId).emit('receiveMessage', { senderId, message });
-              console.log(`Message from ${senderId} to ${receiverId}: ${message}`);
-            }
-          }
-        );
-      });
-      
-  
-    socket.on('disconnect', () => {
-      console.log('Client disconnected');
-    });
+  } catch (error) {
+    console.error('Error in join event:', error);
+  }
+});
+
+
+  // Handle sending messages
+  socket.on('sendMessage', async ({ senderId, receiverId, message }) => {
+    try {
+      const roomId = generateRoomId(senderId, receiverId);
+
+      // Insert message into the database
+      await db.query(
+        'INSERT INTO messages (room_id, sender_id, receiver_id, message) VALUES (?, ?, ?, ?)',
+        [roomId, senderId, receiverId, message]
+      );
+
+      // Emit the message to the receiver's room
+      io.to(roomId).emit('receiveMessage', { senderId, message });
+      console.log(`Message from ${senderId} to ${receiverId}: ${message}`);
+
+    } catch (err) {
+      console.error('Error sending message:', err);
+      socket.emit('error', 'Error sending message');
+    }
   });
-  
 
-  
-  // Get all messages between two users
-app.get('/messages/:receiverId', authenticateToken, (req, res) => { 
-    const receiver_id = req.params.receiverId;
-    const sender_id = req.user.userId;
-  
-    db.query(
-      `SELECT * FROM messages WHERE 
-       (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) ORDER BY timestamp`,
-      [sender_id, receiver_id, receiver_id, sender_id],
-      (err, results) => {
-        if (err) return res.status(500).send('Error retrieving messages.');
-        res.json(results);
-      }
+  // Handle disconnect event
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+// Fetch messages API
+app.get('/messages/:userId', async (req, res) => {
+  const user1Id = req.user.userId;  // Assuming you use authentication
+  const user2Id = req.params.userId;
+
+  try {
+    const roomId = generateRoomId(user1Id, user2Id);
+    const [messages] = await db.query(
+      'SELECT * FROM messages WHERE room_id = ? ORDER BY timestamp',
+      [roomId]
     );
-  });
-
+    res.json(messages);
+  } catch (error) {
+    res.status(500).send('Error retrieving messages');
+  }
+});
 
 
 
